@@ -20,9 +20,7 @@ const rabbitMQService = RabbitMQService.getInstance();
     await redisService.connect();
     await rabbitMQService.connect();
     rabbitMQService.consume("driver_added", (data => {
-      console.log("received_data",JSON.parse(data.toString()))
-    
-      new DriverAddedEventHandler().handle(data)
+      new DriverAddedEventHandler().handle(Buffer.from(data).toString())
     }))
 
     app.use(bodyParser.json());
@@ -34,11 +32,10 @@ const rabbitMQService = RabbitMQService.getInstance();
 
 
       const { queue, message } = req.body;
-      console.log("publish",message)
       try {
         const channel = rabbitMQService.getChannel();
         await channel.assertQueue(queue, { durable: true });
-        channel.sendToQueue(queue, Buffer.from(message.toString()));
+        channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
 
         res.status(200).json({ message: `Message sent to queue "${queue}"` });
       } catch (err) {

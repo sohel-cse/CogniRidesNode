@@ -8,6 +8,7 @@ export class DriverAddedEventHandler implements IEventHandler {
     }
     
     async handle(payload: any): Promise<void> {
+        payload = JSON.parse(payload)
         const db = this.dbService.getDb();
         const collection = db.collection('driver');
         const { userId, status, rating, fcmToken} = payload
