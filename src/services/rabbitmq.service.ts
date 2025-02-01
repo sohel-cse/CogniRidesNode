@@ -7,7 +7,7 @@ export class RabbitMQService {
   private uri: string;
 
   private constructor() {
-    this.uri = process.env.RABBITMQ_URI || 'amqp://localhost';
+    this.uri = process.env.RABBITMQ_URI || 'amqp://localhost';  // Use your RabbitMQ URI here
   }
 
   public static getInstance(): RabbitMQService {
@@ -17,19 +17,21 @@ export class RabbitMQService {
     return RabbitMQService.instance;
   }
 
+  // Connect to RabbitMQ server and create channel
   public async connect(): Promise<void> {
     try {
       if (!this.connection) {
         this.connection = await amqplib.connect(this.uri);
         this.channel = await this.connection.createChannel();
-        console.log('Connected to RabbitMQ');
+        console.log('✅ RabbitMQ connection successful!');
       }
     } catch (error) {
-      console.error('Failed to connect to RabbitMQ:', error);
+      console.error('❌ RabbitMQ connection failed:', error);
       throw error;
     }
   }
 
+  // Return the channel
   public getChannel(): Channel {
     if (!this.channel) {
       throw new Error('RabbitMQ channel is not initialized. Call connect() first.');
@@ -37,6 +39,7 @@ export class RabbitMQService {
     return this.channel;
   }
 
+  // Close connection and channel
   public async close(): Promise<void> {
     try {
       if (this.channel) {
@@ -52,25 +55,48 @@ export class RabbitMQService {
     }
   }
 
-  async consume(queue: string,  onReceive: (data: any)=> void) {
+  // Publish message to a fanout exchange
+  public async publishToExchange(exchange: string, message: any): Promise<void> {
     try {
-      if (this.channel) {
-        await this.channel.assertQueue(queue, { durable: true });
-
-        this.channel.consume(
-          queue,
-          msg => {
-            if (msg) {
-              console.log('Message received:', Buffer.from(msg.content).toString());
-              onReceive(msg.content)
-              this.channel?.ack(msg);
-            }
-          },
-          { noAck: false }
-        );
-      }
+      const channel = this.getChannel();
+      await channel.assertExchange(exchange, 'fanout', { durable: true });  // Ensure the exchange exists
+      channel.publish(exchange, '', Buffer.from(JSON.stringify(message))); // Publish to the exchange (no routing key for fanout)
+      console.log('Message published to exchange:', exchange);
     } catch (err) {
-      console.log({ err });
+      console.error('Error publishing message to exchange:', err);
+    }
+  }
+
+  // Consume messages from a fanout exchange
+  public async consumeFromExchange(exchange: string, onReceive: (data: any) => void): Promise<void> {
+    try {
+      const channel = this.getChannel();
+
+      // Declare an exclusive, temporary queue for the consumer
+      const queue = await channel.assertQueue('matchmaking_driver', { exclusive: true });
+
+      // Bind the queue to the fanout exchange
+      await channel.bindQueue(queue.queue, exchange, '');
+
+      // Start consuming messages from the queue
+      channel.consume(
+        queue.queue,
+        (msg) => {
+          if (msg) {
+            const messageContent = Buffer.from(msg.content).toString();
+            console.log('Message received:', messageContent);
+
+            // Call the handler function passed by the consumer
+            onReceive(messageContent);
+
+            // Acknowledge the message to remove it from the queue
+            channel.ack(msg);
+          }
+        },
+        { noAck: false }  // Set to false to require message acknowledgement
+      );
+    } catch (err) {
+      console.error('Error consuming from exchange:', err);
     }
   }
 }

@@ -29,9 +29,9 @@ export class RedisService {
   public async connect(): Promise<void> {
     try {
       await this.client.connect();
-      console.log('Connected to Redis successfully!');
+      console.log('✅ Redis connection successful!');
     } catch (error) {
-      console.error('Failed to connect to Redis', error);
+      console.error('❌ Redis connection failed:', error);
       process.exit(1);
     }
   }

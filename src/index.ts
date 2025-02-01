@@ -20,9 +20,10 @@ const rabbitMQService = RabbitMQService.getInstance();
     await connectToDatabase();
     await redisService.connect();
     await rabbitMQService.connect();
-    rabbitMQService.consume("driver_added", (data => {
-      new DriverAddedEventHandler().handle(Buffer.from(data).toString())
-    }))
+    rabbitMQService.consumeFromExchange('passenger_registration_exchange', (data: string) => {
+      new DriverAddedEventHandler().handle(data);  // Example event handler
+    });
+   
 
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: true }));
@@ -34,11 +35,10 @@ const rabbitMQService = RabbitMQService.getInstance();
 
       const { queue, message } = req.body;
       try {
-        const channel = rabbitMQService.getChannel();
-        await channel.assertQueue(queue, { durable: true });
-        channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
-
-        res.status(200).json({ message: `Message sent to queue "${queue}"` });
+        
+        await rabbitMQService.publishToExchange(queue, message);
+        
+        res.status(200).json({ message: `Message published successfully to "${queue}"` });
       } catch (err) {
         res.status(500).json({ error: err });
       }
