@@ -6,17 +6,18 @@ import { DatabaseService } from './services/database.service';
 import { RedisService } from './services/redis.service';
 import { RabbitMQService } from './services/rabbitmq.service';
 import { DriverAddedEventHandler } from './modules/driver/DriverAddedEventHandler';
+import { connectToDatabase } from './services/database';
+
 
 const app = express();
 const PORT = process.env.APP_PORT || 3000;
 
-const dbService = DatabaseService.getInstance();
 const redisService = RedisService.getInstance();
 const rabbitMQService = RabbitMQService.getInstance();
 
 (async () => {
   try {
-    await dbService.connect();
+    await connectToDatabase();
     await redisService.connect();
     await rabbitMQService.connect();
     rabbitMQService.consume("driver_added", (data => {
