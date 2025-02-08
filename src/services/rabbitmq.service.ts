@@ -67,6 +67,16 @@ export class RabbitMQService {
     }
   }
 
+  public async publishToQueue(name: string, message: any): Promise<void> {
+    try {
+      const channel = this.getChannel();
+      channel.sendToQueue(name, Buffer.from(JSON.stringify(message))); 
+      console.log('Message published to queue:', name);
+    } catch (err) {
+      console.error('Error publishing message to queue:', err);
+    }
+  }
+
   // Consume messages from a fanout exchange
   public async consumeFromExchange(exchange: string, onReceive: (data: any) => void): Promise<void> {
     try {
