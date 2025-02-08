@@ -73,7 +73,7 @@ export class RabbitMQService {
       const channel = this.getChannel();
 
       // Declare an exclusive, temporary queue for the consumer
-      const queue = await channel.assertQueue('matchmaking_driver', { exclusive: true });
+      const queue = await channel.assertQueue('matchmaking_driver', { durable: true });
 
       // Bind the queue to the fanout exchange
       await channel.bindQueue(queue.queue, exchange, '');
