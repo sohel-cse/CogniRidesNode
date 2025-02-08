@@ -7,6 +7,9 @@ import { RedisService } from './services/redis.service';
 import { RabbitMQService } from './services/rabbitmq.service';
 import { DriverAddedEventHandler } from './modules/driver/DriverAddedEventHandler';
 import { connectToDatabase } from './services/database';
+import { GetMatchCommand } from './modules/match/GetMatchCommand';
+import { GetMatchCommandDto } from './modules/match/GetMatchCommandDto';
+import { GetMatchCommandHandler } from './modules/match/GetMatchCommandHandler';
 
 
 const app = express();
@@ -22,6 +25,11 @@ const rabbitMQService = RabbitMQService.getInstance();
     await rabbitMQService.connect();
     rabbitMQService.consumeFromExchange('passenger_registration_exchange', (data: string) => {
       new DriverAddedEventHandler().handle(data);  // Example event handler
+    });
+
+    rabbitMQService.consumeFromQueue('get_match_command', (data: string) => {
+      const drivers: GetMatchCommandDto = JSON.parse(data)
+      new GetMatchCommandHandler().handle(new GetMatchCommand(drivers));  // Example event handler
     });
    
 

@@ -99,4 +99,36 @@ export class RabbitMQService {
       console.error('Error consuming from exchange:', err);
     }
   }
+
+  public async consumeFromQueue(queue_name: string, onReceive: (data: any) => void): Promise<void> {
+    try {
+      const channel = this.getChannel();
+
+      // Declare an exclusive, temporary queue for the consumer
+      const queue = await channel.assertQueue(queue_name, { durable: true });
+
+      // Bind the queue to the fanout exchange
+      // await channel.bindQueue(queue.queue, exchange, '');
+
+      // Start consuming messages from the queue
+      channel.consume(
+        queue.queue,
+        (msg) => {
+          if (msg) {
+            const messageContent = Buffer.from(msg.content).toString();
+            console.log('Message received:', messageContent);
+
+            // Call the handler function passed by the consumer
+            onReceive(messageContent);
+
+            // Acknowledge the message to remove it from the queue
+            channel.ack(msg);
+          }
+        },
+        { noAck: false }  // Set to false to require message acknowledgement
+      );
+    } catch (err) {
+      console.error('Error consuming from exchange:', err);
+    }
+  }
 }
